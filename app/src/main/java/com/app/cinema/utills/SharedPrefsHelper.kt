@@ -8,7 +8,7 @@ import java.lang.reflect.Type
 
 object SharedPrefsHelper {
 
-    fun saveData(activity: Activity, historyList: ArrayList<String>) {
+    fun saveData(activity: Activity, key: String, historyList: ArrayList<String>) {
         // method for saving the data in array list.
         // creating a variable for storing data in
         // shared preferences.
@@ -29,14 +29,14 @@ object SharedPrefsHelper {
 
         // below line is to save data in shared
         // prefs in the form of string.
-        editor.putString("history", json)
+        editor.putString(key, json)
 
         // below line is to apply changes
         // and save data in shared prefs.
         editor.apply()
     }
 
-    fun loadData(activity: Activity): ArrayList<String> {
+    fun loadData(activity: Activity, key: String): ArrayList<String> {
         // method to load arraylist from shared prefs
         // initializing our shared prefs with name as
         // shared preferences.
@@ -50,7 +50,7 @@ object SharedPrefsHelper {
 
         // below line is to get to string present from our
         // shared prefs if not present setting it as null.
-        val json = sharedPreferences.getString("history", null)
+        val json = sharedPreferences.getString(key, null)
 
         // below line is to get the type of our array list.
         val type: Type = object : TypeToken<ArrayList<String?>?>() {}.type

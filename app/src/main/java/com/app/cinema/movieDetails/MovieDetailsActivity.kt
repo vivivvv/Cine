@@ -13,16 +13,22 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.app.cinema.App
 import com.app.cinema.R
 import com.app.cinema.databinding.ActivityMovieDetailsBinding
 import com.app.cinema.model.MovieDescriptionResponse
 import com.app.cinema.retrofit.RetrofitClient
+import com.app.cinema.roomdp.HistoryData
+import com.app.cinema.utills.SharedPrefsHelper
 import java.util.concurrent.Executors
-
 
 class MovieDetailsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMovieDetailsBinding
-    lateinit var viewModel: MovieDetailsViewModel
+    private val viewModel: MovieDetailsViewModel by lazy {
+        val factory =
+            MovieDetailsViewModel.MovieDetailsViewModelFactory((application as App).repository)
+        ViewModelProvider(this, factory)[MovieDetailsViewModel::class.java]
+    }
     var imdbID: String = ""
     lateinit var hologramListRecycler: RecyclerView
     lateinit var hologramAdapter: HologramAdapter
@@ -30,7 +36,6 @@ class MovieDetailsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_movie_details)
-        viewModel = ViewModelProvider(this)[MovieDetailsViewModel::class.java]
         binding.movieDetailsViewModel = viewModel
         binding.lifecycleOwner = this@MovieDetailsActivity
 
@@ -59,7 +64,28 @@ class MovieDetailsActivity : AppCompatActivity() {
                 val response = RetrofitClient.apiInterface.getMovieDescription(imdbID, apiKey)
                 if (response.isSuccessful) {
                     Log.d("TAG", "getMovieDescription: ${response.body()}")
+                    // Save title to verify title available in local database
+                    if (!SharedPrefsHelper.loadData(this@MovieDetailsActivity, "Title")
+                            .contains(response.body()?.Title)
+                    ) {
+                        SharedPrefsHelper.saveData(
+                            this@MovieDetailsActivity,
+                            "Title",
+                            ArrayList<String>().apply { response.body()?.Title?.let { add(it) } }
+                        )
+                        // Save data to local database
+                        viewModel.insert(
+                            HistoryData(
+                                response.body()!!.Title,
+                                response.body()!!.Poster,
+                                response.body()!!.Plot,
+                                imdbID
+                            )
+                        )
+                    }
+                    // Loading image to UI
                     loadImage(response.body()?.Poster)
+                    // Setting details to UI
                     afterApiCall(response.body())
                 } else {
                     Toast.makeText(

@@ -21,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.app.cinema.databinding.ActivityMainBinding
+import com.app.cinema.history.HistoryActivity
 import com.app.cinema.model.Search
 import com.app.cinema.model.SearchMovieListResponse
 import com.app.cinema.movieDetails.MovieDetailsActivity
@@ -32,15 +33,17 @@ import retrofit2.Response
 class MainActivity : AppCompatActivity(), MovieListAdapter.MovieListClickListener {
 
     private lateinit var binding: ActivityMainBinding
-    lateinit var viewModel: MainViewModel
-    lateinit var movieListRecycler: RecyclerView
-    lateinit var movieListAdapter: MovieListAdapter
+    private val viewModel: MainViewModel by lazy {
+        val factory = MainViewModel.MainViewModelFactory((application as App).repository)
+        ViewModelProvider(this, factory)[MainViewModel::class.java]
+    }
+    private lateinit var movieListRecycler: RecyclerView
+    private lateinit var movieListAdapter: MovieListAdapter
     var cursorAdapter: SimpleCursorAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         binding.mainViewModel = viewModel
         binding.lifecycleOwner = this@MainActivity
 
@@ -57,11 +60,18 @@ class MainActivity : AppCompatActivity(), MovieListAdapter.MovieListClickListene
         // Initial Content visibility
         setMovieRcVisibility()
         // Update history data
-        viewModel.historyList = SharedPrefsHelper.loadData(this@MainActivity)
+        viewModel.historyList = SharedPrefsHelper.loadData(this@MainActivity, "History")
         // Initialize search suggestion
         setSearchSuggestion()
         // Suggestion Listener
         setSuggestionListener()
+        onClickHistoryIcon()
+    }
+
+    private fun onClickHistoryIcon() {
+        binding.historyIcon.setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
+        }
     }
 
     private fun initializeSearchView() {
@@ -80,7 +90,7 @@ class MainActivity : AppCompatActivity(), MovieListAdapter.MovieListClickListene
                     viewModel.historyList.add(query)
                 }
                 // Save history to sharedPreference
-                SharedPrefsHelper.saveData(this@MainActivity, viewModel.historyList)
+                SharedPrefsHelper.saveData(this@MainActivity, "History", viewModel.historyList)
                 // Search Movie
                 searchMovieList(query, "a0783fa9")
                 return false
@@ -91,18 +101,17 @@ class MainActivity : AppCompatActivity(), MovieListAdapter.MovieListClickListene
                     MatrixCursor(arrayOf(BaseColumns._ID, SearchManager.SUGGEST_COLUMN_TEXT_1))
                 newText?.let {
                     viewModel.historyList.forEachIndexed { index, suggestion ->
-                        if (suggestion.contains(newText, true))
-                            cursor.addRow(arrayOf(index, suggestion))
+                        if (suggestion.contains(newText, true)) {
+                            if (index < 10) {
+                                cursor.addRow(arrayOf(index, suggestion))
+                            }
+                        }
                     }
                 }
                 cursorAdapter?.changeCursor(cursor)
                 return true
             }
         })
-
-    }
-
-    private fun doApiCall() {
 
     }
 
