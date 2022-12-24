@@ -19,7 +19,6 @@ import com.app.cinema.databinding.ActivityMovieDetailsBinding
 import com.app.cinema.model.MovieDescriptionResponse
 import com.app.cinema.retrofit.RetrofitClient
 import com.app.cinema.roomdp.HistoryData
-import com.app.cinema.utills.SharedPrefsHelper
 import java.util.concurrent.Executors
 
 class MovieDetailsActivity : AppCompatActivity() {
@@ -64,25 +63,15 @@ class MovieDetailsActivity : AppCompatActivity() {
                 val response = RetrofitClient.apiInterface.getMovieDescription(imdbID, apiKey)
                 if (response.isSuccessful) {
                     Log.d("TAG", "getMovieDescription: ${response.body()}")
-                    // Save title to verify title available in local database
-                    if (!SharedPrefsHelper.loadData(this@MovieDetailsActivity, "Title")
-                            .contains(response.body()?.Title)
-                    ) {
-                        SharedPrefsHelper.saveData(
-                            this@MovieDetailsActivity,
-                            "Title",
-                            ArrayList<String>().apply { response.body()?.Title?.let { add(it) } }
+                    // Save data to local database
+                    viewModel.insert(
+                        HistoryData(
+                            response.body()!!.Title,
+                            response.body()!!.Poster,
+                            response.body()!!.Plot,
+                            imdbID
                         )
-                        // Save data to local database
-                        viewModel.insert(
-                            HistoryData(
-                                response.body()!!.Title,
-                                response.body()!!.Poster,
-                                response.body()!!.Plot,
-                                imdbID
-                            )
-                        )
-                    }
+                    )
                     // Loading image to UI
                     loadImage(response.body()?.Poster)
                     // Setting details to UI
